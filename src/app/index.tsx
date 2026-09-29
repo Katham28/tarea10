@@ -1,98 +1,177 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+/*
+	Ejemplo de app en React Native que permite tomar una foto con la cámara
+	para establecerla como foto de perfil en monsterballgo
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+	Referencias:
+	https://docs.expo.dev/versions/latest/sdk/imagepicker/
+*/
+import { Text, 
+	View, 
+	StyleSheet, 
+	Image, 
+	TextInput,
+	Pressable,
+	Alert, 
+	Platform } from "react-native";
+import { useState } from "react";
+import * as ImagePicker from 'expo-image-picker';
+import { File } from "expo-file-system";
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
+const SET_PROFILE_PICTURE_URL = 'http://monsterballgo.com/api/setpfp';
+
+//Ejemplo de un componente reusable que recibe props, normalmente van en otro archivo y son importados
+type MyButtonProps = {
+  title: string;
+  onPress: () => void;
+};
+export function MyButton({ title, onPress }: MyButtonProps) {
+	  return (
+		<Pressable onPress={onPress} style={styles.boton}>
+		  <Text style={styles.botonTexto}>{title}</Text>
+		</Pressable>
+	  );
 }
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+//Componente principal de la app
+export default function Index() {
+	//contiene el valor del input de id de usuario
+	const [userValue, setUserValue] = useState('');
+	//guarda la foto capturada para mostrarla y subirla
+	const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+	//callback del botón de tomar foto
+	const onTomarFoto = async() =>
+	{
+		console.log('tomar foto');
+		//hay que pedir permiso para usar la cámara
+		const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+		if (!permissionResult.granted) {
+			alert(" Dame permiso de camara plis");
+			return;
+		}
+		
+		let result = await ImagePicker.launchCameraAsync({
+			mediaTypes: 'images', // ImagePicker.MediaType
+			allowsEditing: true,
+			aspect: [1, 1], //imagen cuadrada apropiada para foto de perfil
+			quality: 1,
+		});
+		if (!result.canceled) {
+			setPhoto(result.assets[0]);
+		}
+	}
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+	//callback del boton de subir foto
+	const onSubirFoto = async() =>
+	{
+		console.log("subiendo foto");
+		const id = userValue.trim();
+		if (!id || !Number.isInteger(Number(id))) {
+			Alert.alert('ID inválido', 'Escribe un ID de usuario valido');
+			return;
+		}
+		if (!photo) {
+			Alert.alert('Falta la foto', 'Toma una foto antes de intentar subirla.');
+			return;
+		}
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
+
+		//construimos un formdata con la imagen y los parametros solicitados por el endpoint
+		const formData = new FormData();
+		formData.append('token', 'code37');
+		formData.append('id', id);
+		console.log(Platform.OS);
+		formData.append('image',  new File(photo.uri)  );
+
+		//intentar un poderosísimo fetch con la imagen en el body
+		try {
+			const response = await fetch(SET_PROFILE_PICTURE_URL, {
+				method: 'POST',
+				body: formData,
+				headers: {
+					'Content-Type': 'multipart/form-data',
+			  	},
+			});
+			console.log('Respuesta del servidor:', response);
+			const data: { error?: string; pfp_url?: string } = await response.json();
+
+			if (!response.ok || data.error) {
+				Alert.alert('No se pudo subir la foto', data.error ?? `Error HTTP ${response.status}`);
+				return;
+			}
+			//cambiar la source uri de la imagen por la entregada por el servidor
+			if (data.pfp_url) {
+				setPhoto({ ...photo, uri: data.pfp_url });
+			}
+			Alert.alert('Foto actualizada', 'La foto de perfil se subió correctamente.');
+		} catch (error) {
+			console.error('Error al subir la foto:', error);
+			Alert.alert('Error de conexión', 'No se pudo conectar con el servidor.');
+		}
+	}
+
+	//callback para elegir foto de las guardadas en el dispositivo
+	const onElegirImagen = async() =>
+	{
+		Alert.alert('Función no implementada', 'hay que implementar esta funcionalidad xdxd.');
+	}
+
+	//Esto se llama JSX/TSX y es un monstruoso híbrido de HTML y typescript para renderear la UI de la app
+	return (
+	<View style={styles.container}>
+		<Text style={styles.title}>Hola Mundo!</Text>
+		<Text style={styles.subtitle}>ID:</Text>
+		<TextInput style={styles.input} onChangeText={setUserValue}></TextInput>
+		<Image source={photo ? { uri: photo.uri } : { uri: 'http://monsterballgo.com/media/usr/default.png' }} style={styles.imagePreview}></Image>
+		<MyButton title="Elegir Imagen" onPress={onElegirImagen} />
+		<MyButton title="Tomar Foto" onPress={onTomarFoto} />
+		<MyButton title="Subir Foto" onPress={onSubirFoto} />
+	</View>
+	);
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  title:{
+			fontFamily:'poppins',
+			fontSize:44
+		},
+	subtitle:{
+		marginTop:10,
+		fontFamily:'roboto',
+		fontSize:18
+	},
+	input:{
+		marginTop:10,
+		borderWidth:1,
+		borderColor:'gray',
+		borderRadius:5,
+		padding:10,
+		fontFamily:'roboto',
+		fontSize:18,
+		width:300
+	},
+	imagePreview:
+	{
+		width:150,
+		height:150,
+		marginTop:20
+	},
+	boton:{
+		margin:5,  
+		padding:10, 
+		borderRadius:5,
+		backgroundColor:'darkgray',
+		color:'#fff'
+	},
+	botonTexto: {
+		color: "#fff",
+		fontWeight: "bold",
+		fontSize: 16,
+		textAlign: "center",
+	},
 });
