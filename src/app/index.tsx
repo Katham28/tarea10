@@ -5,17 +5,20 @@
 	Referencias:
 	https://docs.expo.dev/versions/latest/sdk/imagepicker/
 */
-import { Text, 
-	View, 
-	StyleSheet, 
-	Image, 
-	TextInput,
-	Pressable,
-	Alert, 
-	Platform } from "react-native";
-import { useState } from "react";
-import * as ImagePicker from 'expo-image-picker';
 import { File } from "expo-file-system";
+import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from "expo-linear-gradient";
+import { useState } from "react";
+import {
+	Alert,
+	Image,
+	Platform,
+	Pressable,
+	StyleSheet,
+	Text,
+	TextInput,
+	View
+} from "react-native";
 
 const SET_PROFILE_PICTURE_URL = 'http://monsterballgo.com/api/setpfp';
 
@@ -118,31 +121,59 @@ export default function Index() {
 
 	//Esto se llama JSX/TSX y es un monstruoso híbrido de HTML y typescript para renderear la UI de la app
 	return (
+
+		<LinearGradient
+  colors={["#ff0055", "#ff8fab", "#fff0f5"]}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 0, y: 1 }}
+  style={styles.container}
+>
+
+
 	<View style={styles.container}>
-		<Text style={styles.title}>Hola Mundo!</Text>
+
+		<Text style={styles.title}>Tarea 10</Text>
+
+<Image source={photo ? { uri: photo.uri } : { uri: 'http://monsterballgo.com/media/usr/default.png' }} style={styles.imagePreview}></Image>
+
+	<View style={styles.buttonRow}>
 		<Text style={styles.subtitle}>ID:</Text>
 		<TextInput style={styles.input} onChangeText={setUserValue}></TextInput>
-		<Image source={photo ? { uri: photo.uri } : { uri: 'http://monsterballgo.com/media/usr/default.png' }} style={styles.imagePreview}></Image>
+		
+	</View>
+		
+		<View style={styles.buttonRow}>
 		<MyButton title="Elegir Imagen" onPress={onElegirImagen} />
 		<MyButton title="Tomar Foto" onPress={onTomarFoto} />
 		<MyButton title="Subir Foto" onPress={onSubirFoto} />
+		</View>
+	
 	</View>
+	
+
+
+	</LinearGradient>
+
 	);
 }
 
 const styles = StyleSheet.create({
-  container: {
+   container: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+
+    paddingTop: 80,
   },
   title:{
-			fontFamily:'poppins',
+			fontFamily:'Nunito',
+			 color: "#ffffff",
 			fontSize:44
 		},
 	subtitle:{
 		marginTop:10,
-		fontFamily:'roboto',
+		fontFamily:'Nunito',
+		color: "#ff0055",
 		fontSize:18
 	},
 	input:{
@@ -151,9 +182,11 @@ const styles = StyleSheet.create({
 		borderColor:'gray',
 		borderRadius:5,
 		padding:10,
-		fontFamily:'roboto',
+		fontFamily:'Nunito',
 		fontSize:18,
-		width:300
+		width:300,
+		color: "#ff0055",
+		backgroundColor: "#f7f7f7"
 	},
 	imagePreview:
 	{
@@ -165,13 +198,22 @@ const styles = StyleSheet.create({
 		margin:5,  
 		padding:10, 
 		borderRadius:5,
-		backgroundColor:'darkgray',
-		color:'#fff'
+		backgroundColor:'#ff0055',
+
 	},
 	botonTexto: {
-		color: "#fff",
+		color: "#f7f7f7f7",
 		fontWeight: "bold",
 		fontSize: 16,
+			fontFamily:'Nunito',
 		textAlign: "center",
 	},
+
+	  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+	margin:25
+  },
 });
