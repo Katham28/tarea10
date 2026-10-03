@@ -22,7 +22,7 @@ import {
 
 const SET_PROFILE_PICTURE_URL = 'http://monsterballgo.com/api/setpfp';
 
-//Ejemplo de un componente reusable que recibe props, normalmente van en otro archivo y son importados
+
 type MyButtonProps = {
   title: string;
   onPress: () => void;
@@ -37,9 +37,9 @@ export function MyButton({ title, onPress }: MyButtonProps) {
 
 //Componente principal de la app
 export default function Index() {
-	//contiene el valor del input de id de usuario
+
 	const [userValue, setUserValue] = useState('');
-	//guarda la foto capturada para mostrarla y subirla
+
 	const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
 	//callback del botón de tomar foto
@@ -54,9 +54,9 @@ export default function Index() {
 		}
 		
 		let result = await ImagePicker.launchCameraAsync({
-			mediaTypes: 'images', // ImagePicker.MediaType
+			mediaTypes: 'images', 
 			allowsEditing: true,
-			aspect: [1, 1], //imagen cuadrada apropiada para foto de perfil
+			aspect: [1, 1], 
 			quality: 1,
 		});
 		if (!result.canceled) {
@@ -84,16 +84,21 @@ export default function Index() {
 		formData.append('token', 'code37');
 		formData.append('id', id);
 		console.log(Platform.OS);
-		formData.append('image',  new File(photo.uri)  );
 
 		//intentar un poderosísimo fetch con la imagen en el body
 		try {
+			//expo-file-system no funciona en web, ahí la imagen se convierte en un Blob
+			if (Platform.OS === 'web') {
+				const blob = await (await fetch(photo.uri)).blob();
+				formData.append('image', blob, photo.fileName ?? 'foto.jpg');
+			} else {
+				formData.append('image', new File(photo.uri));
+			}
+
+			//sin header Content-Type: fetch lo pone solo junto con el boundary del multipart
 			const response = await fetch(SET_PROFILE_PICTURE_URL, {
 				method: 'POST',
 				body: formData,
-				headers: {
-					'Content-Type': 'multipart/form-data',
-			  	},
 			});
 			console.log('Respuesta del servidor:', response);
 			const data: { error?: string; pfp_url?: string } = await response.json();
@@ -116,7 +121,16 @@ export default function Index() {
 	//callback para elegir foto de las guardadas en el dispositivo
 	const onElegirImagen = async() =>
 	{
-		Alert.alert('Función no implementada', 'hay que implementar esta funcionalidad xdxd.');
+		console.log('elegir imagen');
+		let result = await ImagePicker.launchImageLibraryAsync({
+			mediaTypes: 'images',
+			allowsEditing: true,
+			aspect: [1, 1],
+			quality: 1,
+		});
+		if (!result.canceled) {
+			setPhoto(result.assets[0]);
+		}
 	}
 
 	//Esto se llama JSX/TSX y es un monstruoso híbrido de HTML y typescript para renderear la UI de la app
@@ -145,6 +159,9 @@ export default function Index() {
 		<View style={styles.buttonRow}>
 		<MyButton title="Elegir Imagen" onPress={onElegirImagen} />
 		<MyButton title="Tomar Foto" onPress={onTomarFoto} />
+		</View>
+
+		<View style={styles.buttonRow}>
 		<MyButton title="Subir Foto" onPress={onSubirFoto} />
 		</View>
 	
